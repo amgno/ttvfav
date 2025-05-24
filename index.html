@@ -1,58 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ttvfav</title>
+    <title>Index of /ttvfav</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <nav class="navbar">
-        <div class="nav-content">
-            <h1 class="logo">ttvfav</h1>
-            <div class="nav-actions">
-                <div class="add-streamer">
-                    <input type="text" id="streamerInput" placeholder="Enter streamer username">
-                    <button onclick="addStreamer()">Add Streamer</button>
-                </div>
-                <button class="theme-btn" onclick="toggleTheme(event)" title="Theme (Shift+Click for OLED)">🌓</button>
-                <button class="settings-btn" onclick="openSettings()">⚙️</button>
-            </div>
-        </div>
-    </nav>
 
-    <div class="container">
-        <main>
-            <div id="streamers-list">
-                <!-- Streamers will be added here dynamically -->
-            </div>
-        </main>
+<body>
+    <header>
+        <h1>Index of /ttvfav</h1>
+        <div class="path-info">ophelia.red</div>
+    </header>
+
+    <div class="controls">
+        <input type="text" id="streamerInput" placeholder="streamer username">
+        <button onclick="addStreamer()">add</button>
+        <button onclick="openSettings()">settings</button>
     </div>
 
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>About ttvfav</h3>
-                <p>A simple way to track your favorite Twitch streamers. No account needed, data stored locally.</p>
-            </div>
-            <div class="footer-section">
-                <h3>Quick Tips</h3>
-                <ul>
-                    <li>Click on live channels to open stream</li>
-                    <li>Hover over cards to show remove button</li>
-                    <li>Status updates every 2 minutes</li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h3>Privacy</h3>
-                <p>Your data and API credentials are stored locally in cookies. No data is sent to any servers except Twitch API.</p>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>Made with 💜 for Twitch community</p>
-            <p class="update-status" id="lastUpdate"></p>
-        </div>
-    </footer>
+    <br>
+
+    <table id="streamers-table">
+        <thead>
+            <tr>
+                <th>Channel</th>
+                <th>Status</th>
+                <th>Game</th>
+                <th>Viewers</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="streamers-list">
+            <!-- Streamers will be added here dynamically -->
+        </tbody>
+    </table>
+
+    <div id="empty-state" style="display: none;">
+        <br>
+        No channels added yet. Add your favorite Twitch channels above.
+        <br><br>
+    </div>
+
+    <address>
+        <p style="display: none;" id="lastUpdate"></p>
+        Ophelia stands as one of literature's most haunting figure -- a delicate bloom crushed between duty and desire
+        in Shakespeare's turbulent "Hamlet." Daughter to the king's advisor Polonius and sister to the noble Laertes,
+        she moves through the Danish court with quiet grace that belies her tragic destiny.
+    </address>
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="modal">
@@ -66,43 +62,40 @@
                     <button class="tab-btn active" onclick="switchTab('credentials')">Credentials</button>
                     <button class="tab-btn" onclick="switchTab('share')">Share Settings</button>
                 </div>
-                
+
                 <div id="credentials-tab" class="tab-content active">
-                    <p class="settings-info">
-                        To use this app, you need to provide your Twitch API credentials:
-                        <ol>
-                            <li>Go to <a href="https://dev.twitch.tv/console" target="_blank">Twitch Developer Console</a></li>
-                            <li>Register a new application</li>
-                            <li>Get the Client ID and generate a Client Secret</li>
-                            <li>Enter them below</li>
-                        </ol>
-                    </p>
-                    <div class="settings-form">
-                        <div class="form-group">
-                            <label for="clientId">Client ID</label>
-                            <input type="text" id="clientId" placeholder="Enter your Twitch Client ID">
-                        </div>
-                        <div class="form-group">
-                            <label for="clientSecret">Client Secret</label>
-                            <input type="password" id="clientSecret" placeholder="Enter your Twitch Client Secret">
-                        </div>
-                        <button onclick="saveSettings()">Save Settings</button>
+                    <p>To use this app, you need to provide your Twitch API credentials:</p>
+                    <ol>
+                        <li>Go to <a href="https://dev.twitch.tv/console" target="_blank">Twitch Developer Console</a>
+                        </li>
+                        <li>Register a new application</li>
+                        <li>Get the Client ID and generate a Client Secret</li>
+                        <li>Enter them below</li>
+                    </ol>
+                    <div class="form-group">
+                        <label for="clientId">Client ID</label>
+                        <input type="text" id="clientId" placeholder="Enter your Twitch Client ID">
                     </div>
+                    <div class="form-group">
+                        <label for="clientSecret">Client Secret</label>
+                        <input type="password" id="clientSecret" placeholder="Enter your Twitch Client Secret">
+                    </div>
+                    <button onclick="saveSettings()">Save Settings</button>
                 </div>
 
                 <div id="share-tab" class="tab-content">
                     <div class="share-section">
                         <h3>Export Settings</h3>
-                        <p class="settings-info">Share your settings (API credentials and favorite channels) with others:</p>
+                        <p>Share your settings (API credentials and favorite channels) with others:</p>
                         <div class="share-actions">
                             <input type="text" id="shareCode" readonly placeholder="Your share code will appear here">
                             <button onclick="generateShareCode()">Generate Code</button>
-                            <button onclick="copyShareCode()" class="copy-btn">📋 Copy</button>
+                            <button onclick="copyShareCode()">Copy</button>
                         </div>
                     </div>
                     <div class="share-section">
                         <h3>Import Settings</h3>
-                        <p class="settings-info">Import settings from someone else:</p>
+                        <p>Import settings from someone else:</p>
                         <div class="share-actions">
                             <input type="text" id="importCode" placeholder="Paste share code here">
                             <button onclick="importSettings()">Import</button>
@@ -115,4 +108,5 @@
 
     <script src="script.js"></script>
 </body>
-</html> 
+
+</html>

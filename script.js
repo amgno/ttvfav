@@ -2,54 +2,14 @@
 const COOKIE_NAME = 'twitch_favorites';
 const TOKEN_COOKIE_NAME = 'twitch_token';
 const CREDENTIALS_COOKIE_NAME = 'twitch_credentials';
-const THEME_COOKIE_NAME = 'theme';
 let favorites = [];
 let streamersInfo = new Map();
 
 // Load favorites from cookies on page load
 document.addEventListener('DOMContentLoaded', () => {
-    loadTheme();
     loadFavorites();
     checkCredentials();
 });
-
-// Theme management
-function loadTheme() {
-    const theme = getCookie(THEME_COOKIE_NAME) || 'light';
-    document.documentElement.setAttribute('data-theme', theme);
-    updateThemeButton(theme);
-}
-
-function toggleTheme(event) {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    let newTheme;
-
-    if (event.shiftKey) {
-        // Secret OLED theme with Shift+Click
-        newTheme = currentTheme === 'oled' ? 'light' : 'oled';
-    } else {
-        // Normal theme toggle
-        newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    }
-
-    document.documentElement.setAttribute('data-theme', newTheme);
-    setCookie(THEME_COOKIE_NAME, newTheme, 365);
-    updateThemeButton(newTheme);
-}
-
-function updateThemeButton(theme) {
-    const btn = document.querySelector('.theme-btn');
-    switch(theme) {
-        case 'dark':
-            btn.textContent = '☀️';
-            break;
-        case 'oled':
-            btn.textContent = '🌑';
-            break;
-        default:
-            btn.textContent = '🌙';
-    }
-}
 
 // Update timestamp display
 function updateLastUpdateTime() {
@@ -174,8 +134,7 @@ function addStreamer() {
     }
 }
 
-function removeStreamer(event, streamer) {
-    event.stopPropagation(); // Prevent the card click event
+function removeStreamer(streamer) {
     favorites = favorites.filter(s => s !== streamer);
     saveFavorites();
     updateStreamers();
@@ -295,38 +254,25 @@ async function updateStreamers() {
     }
 }
 
-// Update the render function to include collapsible offline section
+// Update the render function for table layout
 function renderStreamers() {
     const streamersList = document.getElementById('streamers-list');
-    streamersList.innerHTML = `
-        <div class="section-header online-header" style="display: none;">Live Channels</div>
-        <div class="streamers-grid online-streamers"></div>
-        <div class="section-header offline-header" style="display: none;" onclick="toggleOfflineSection()">
-            <span>Offline Channels</span>
-            <span class="collapse-icon">▼</span>
-        </div>
-        <div class="streamers-grid offline-streamers collapsed"></div>
-    `;
+    const emptyState = document.getElementById('empty-state');
+    const table = document.getElementById('streamers-table');
 
-    // If no favorites, show a message
+    // If no favorites, show empty state
     if (favorites.length === 0) {
-        streamersList.innerHTML = `
-            <div class="empty-state">
-                <p>No channels added yet. Add your favorite Twitch channels above!</p>
-            </div>
-        `;
+        table.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
     }
+
+    table.style.display = 'table';
+    emptyState.style.display = 'none';
+    streamersList.innerHTML = '';
 }
 
-// Add toggle function for offline section
-function toggleOfflineSection() {
-    const offlineGrid = document.querySelector('.offline-streamers');
-    const collapseIcon = document.querySelector('.collapse-icon');
-    offlineGrid.classList.toggle('collapsed');
-    collapseIcon.textContent = offlineGrid.classList.contains('collapsed') ? '▼' : '▲';
-}
-
-// Update the helper function to handle stream response with separated sections
+// Update the helper function to handle stream response with table rows
 function handleStreamResponse(data) {
     const onlineStreamers = new Map(data.data.map(stream => [
         stream.user_login,
@@ -337,54 +283,55 @@ function handleStreamResponse(data) {
         }
     ]));
     
-    const onlineGrid = document.querySelector('.online-streamers');
-    const offlineGrid = document.querySelector('.offline-streamers');
+    const streamersList = document.getElementById('streamers-list');
+    streamersList.innerHTML = '';
     
-    // Clear existing content
-    onlineGrid.innerHTML = '';
-    offlineGrid.innerHTML = '';
+    // Sort favorites: online first, then offline
+    const sortedFavorites = favorites.sort((a, b) => {
+        const aOnline = onlineStreamers.has(a);
+        const bOnline = onlineStreamers.has(b);
+        
+        if (aOnline && !bOnline) return -1;
+        if (!aOnline && bOnline) return 1;
+        return 0;
+    });
     
-    favorites.forEach(streamer => {
+    sortedFavorites.forEach(streamer => {
         const isOnline = onlineStreamers.has(streamer);
         const streamerInfo = streamersInfo.get(streamer) || {};
         const streamInfo = onlineStreamers.get(streamer) || {};
         
-        const card = document.createElement('div');
-        card.className = `streamer-card ${isOnline ? 'online' : 'offline'}`;
-        card.dataset.streamer = streamer;
+        const row = document.createElement('tr');
+        const displayName = streamerInfo.displayName || streamer;
         
-        card.innerHTML = `
-            <div class="streamer-image">
-                <img src="${streamerInfo.profileImage || 'https://static-cdn.jtvnw.net/user-default-pictures-uv/75305d54-c7cc-40d1-bb9c-91fbe85943c7-profile_image-70x70.png'}" alt="${streamer}'s profile">
-            </div>
-            <div class="streamer-content">
-                <div class="streamer-header">
-                    <span class="streamer-name">${streamerInfo.displayName || streamer}</span>
-                    <span class="status">${isOnline ? '🟢 Live' : '⭘ Offline'}</span>
-                </div>
-                ${isOnline ? `
-                    <div class="stream-info">
-                        <div class="stream-title">${streamInfo.title}</div>
-                        <div class="stream-game">Playing: ${streamInfo.game}</div>
-                        <div class="viewer-count">👥 ${streamInfo.viewers.toLocaleString()} viewers</div>
-                    </div>
-                ` : ''}
-            </div>
-            <button class="remove-btn" onclick="event.stopPropagation(); removeStreamer(event, '${streamer}')">Remove</button>
-        `;
-        
+        const channelCell = document.createElement('td');
         if (isOnline) {
-            card.onclick = () => window.open(`https://twitch.tv/${streamer}`, '_blank');
-            card.style.cursor = 'pointer';
-            onlineGrid.appendChild(card);
+            channelCell.innerHTML = `<a href="https://twitch.tv/${streamer}" target="_blank">${displayName}</a>`;
         } else {
-            offlineGrid.appendChild(card);
+            channelCell.textContent = displayName;
         }
+        
+        const statusCell = document.createElement('td');
+        statusCell.textContent = isOnline ? 'Live' : 'Offline';
+        statusCell.className = isOnline ? 'status-online' : 'status-offline';
+        
+        const gameCell = document.createElement('td');
+        gameCell.textContent = isOnline ? (streamInfo.game || '-') : '-';
+        
+        const viewersCell = document.createElement('td');
+        viewersCell.textContent = isOnline ? streamInfo.viewers?.toLocaleString() || '0' : '-';
+        
+        const actionsCell = document.createElement('td');
+        actionsCell.innerHTML = `<span class="remove-link" onclick="removeStreamer('${streamer}')">remove</span>`;
+        
+        row.appendChild(channelCell);
+        row.appendChild(statusCell);
+        row.appendChild(gameCell);
+        row.appendChild(viewersCell);
+        row.appendChild(actionsCell);
+        
+        streamersList.appendChild(row);
     });
-    
-    // Show/hide section headers based on content
-    document.querySelector('.online-header').style.display = onlineGrid.children.length ? 'block' : 'none';
-    document.querySelector('.offline-header').style.display = offlineGrid.children.length ? 'block' : 'none';
 }
 
 // Share functionality
@@ -414,11 +361,7 @@ function copyShareCode() {
 
     shareInput.select();
     document.execCommand('copy');
-    
-    const copyBtn = document.querySelector('.copy-btn');
-    const originalText = copyBtn.textContent;
-    copyBtn.textContent = '✅ Copied!';
-    setTimeout(() => copyBtn.textContent = originalText, 2000);
+    alert('Share code copied to clipboard!');
 }
 
 function importSettings() {
